@@ -1,6 +1,20 @@
-fn main() {
-    println!("Hello, Caravel!");
+use caravel::cli;
 
-    caravel::agent::do_agent();
-    caravel::client::do_client();
+fn main() {
+    let args = cli::run();
+
+    match args {
+        cli::CaravelArgs::Client(client_args) => {
+            println!("Running client!");
+            println!("Manifest: {:?}", client_args.manifest);
+            println!("Targets: {:?}", client_args.targets);
+            println!("Groups: {:?}", client_args.groups);
+            println!("Inventory: {:?}", client_args.inventory);
+        }
+        cli::CaravelArgs::Agent(agent_args) => {
+            println!("Running agent!");
+            println!("Config: {:?}", agent_args.config);
+        }
+    }
 }
+
