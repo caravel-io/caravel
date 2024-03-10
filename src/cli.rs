@@ -1,3 +1,5 @@
+use crate::agent::AgentArgs;
+use crate::client::ClientArgs;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -40,17 +42,6 @@ enum Commands {
 pub enum CaravelArgs {
     Client(ClientArgs),
     Agent(AgentArgs),
-}
-
-pub struct ClientArgs {
-    pub manifest: PathBuf,
-    pub targets: Option<Vec<String>>,
-    pub groups: Option<Vec<String>>,
-    pub inventory: Option<PathBuf>,
-}
-
-pub struct AgentArgs {
-    pub config: PathBuf,
 }
 
 pub fn run() -> CaravelArgs {
