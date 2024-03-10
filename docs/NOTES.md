@@ -204,3 +204,11 @@ conflicting parameters aren't both set.
 
 Validation should occur on the agent, regardless of mode. That way, module
 resolution will always be accurate, and it's less heavy on the client (laptop).
+
+## Questions
+- Should we use a unique file extension instead of .lua, for auto-completion, etc.
+- How do we include other compiled modules? Can you interact with a binary like it were a unix socket. Would facilitate lsp.
+
+## Module Architechture
+Caravel Binary looks for compiled module binary, passes lua to it to compile, then uses the binary to enact changes/logic
+Everything, even the core module, should be a seprate compiled module.
