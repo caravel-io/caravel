@@ -79,7 +79,7 @@ configure things like groups, hosts, etc?
 caravel.setup.connection({
     groups = { "mygroup1" },
     hosts = { "host1", "host2" }
-    timeout=60,
+    timeout = 60,
 })
 
 caravel.core.file({
