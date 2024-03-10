@@ -191,6 +191,10 @@ Compilation should include the following steps:
 
 - Validating each resource (module)
 
+- Grabbing all the source files (copying files and whatnot)
+
+Should deliver some giant payload with everything to agent.
+
 ## Validation of manifest
 
 Each module should have a `validate()` method that will make sure that the
