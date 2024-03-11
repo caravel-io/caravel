@@ -1,9 +1,32 @@
-// wip
+use crate::cli::Runnable;
+use std::path::PathBuf;
 
+pub struct CreateModule {
+    pub destination: PathBuf,
+}
+
+impl Runnable for CreateModule {
+    fn run(&self) {
+        println!("Creating new module at: {:?}", self.destination);
+    }
+}
+
+pub struct ValidateModule {
+    pub path: PathBuf,
+}
+
+impl Runnable for ValidateModule {
+    fn run(&self) {
+        println!("Validating module at: {:?}", self.path);
+    }
+}
+
+// wip
 use crate::transport::{Event, EventType, File, Manifest, QueryType};
 use anyhow::Result;
 use std::process::exit;
 
+#[allow(dead_code)]
 fn run_module() -> Result<()> {
     // Read the input from only arg
     let args: Vec<String> = std::env::args().collect();

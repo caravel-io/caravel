@@ -1,7 +1,12 @@
-use crate::agent::AgentArgs;
-use crate::client::ClientArgs;
+use crate::agent::Agent;
+use crate::client::Client;
+use crate::module::{CreateModule, ValidateModule};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+
+pub trait Runnable {
+    fn run(&self);
+}
 
 /// Caravel is the best thing since sliced bread
 #[derive(Parser)]
@@ -37,14 +42,31 @@ enum Commands {
         #[arg()]
         config: PathBuf,
     },
+    /// Module actions
+    Module {
+        /// Module action
+        #[command(subcommand, name = "action")]
+        action: ModuleAction,
+    },
 }
 
-pub enum CaravelArgs {
-    Client(ClientArgs),
-    Agent(AgentArgs),
+#[derive(Clone, Debug, Subcommand)]
+enum ModuleAction {
+    /// Bootstrap a new module directory for development
+    New {
+        /// Destination directory
+        #[arg(name = "path")]
+        destination: PathBuf,
+    },
+    /// Validate a module directory
+    Validate {
+        /// Destination directory
+        #[arg(short, long)]
+        path: PathBuf,
+    },
 }
 
-pub fn run() -> CaravelArgs {
+pub fn run() -> Box<dyn Runnable> {
     let args = Cli::parse();
 
     match &args.command {
@@ -53,14 +75,20 @@ pub fn run() -> CaravelArgs {
             targets,
             groups,
             inventory,
-        } => CaravelArgs::Client(ClientArgs {
+        } => Box::new(Client {
             manifest: manifest.clone(),
             targets: targets.clone(),
             groups: groups.clone(),
             inventory: inventory.clone(),
         }),
-        Commands::Agent { config } => CaravelArgs::Agent(AgentArgs {
+        Commands::Agent { config } => Box::new(Agent {
             config: config.clone(),
         }),
+        Commands::Module { action } => match action {
+            ModuleAction::New { destination } => Box::new(CreateModule {
+                destination: destination.clone(),
+            }),
+            ModuleAction::Validate { path } => Box::new(ValidateModule { path: path.clone() }),
+        },
     }
 }

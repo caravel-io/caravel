@@ -1,9 +1,13 @@
 use std::path::PathBuf;
+use crate::cli::Runnable;
 
-pub struct AgentArgs {
+pub struct Agent {
     pub config: PathBuf,
 }
 
-pub fn run(args: AgentArgs) {
-    println!("Starting agent with config: {:?}", args.config);
+impl Runnable for Agent {
+    fn run(&self) {
+        println!("Starting agent with config: {:?}", self.config);
+    }
 }
+
