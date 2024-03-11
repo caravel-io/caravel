@@ -22,7 +22,9 @@ impl Runnable for ValidateModule {
 }
 
 // wip
-use crate::transport::{Event, EventType, File, Manifest, QueryType};
+use crate::event::{Event, EventType, QueryType};
+use crate::examplemodulefile::File;
+use crate::manifest::Manifest;
 use anyhow::Result;
 use std::process::exit;
 

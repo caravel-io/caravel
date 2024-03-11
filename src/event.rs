@@ -1,3 +1,4 @@
+use crate::manifest::Manifest;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::io;
@@ -20,33 +21,6 @@ pub enum EventType {
 #[derive(Serialize, Deserialize)]
 pub struct Event {
     pub class: EventType,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Manifest {
-    pub resources: Vec<Box<dyn Resource>>,
-}
-
-#[typetag::serde]
-pub trait Resource {
-    fn apply(&self) -> Result<()>;
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct File {
-    pub name: String,
-    pub content: String,
-}
-
-#[typetag::serde]
-impl Resource for File {
-    fn apply(&self) -> Result<()> {
-        // let mut file = std::fs::File::create(&self.name)?;
-        // file.write_all(self.content.as_bytes())?;
-        // Ok(())
-        println!("pretending to create file: {}", self.name);
-        Ok(())
-    }
 }
 
 impl Event {

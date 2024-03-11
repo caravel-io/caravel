@@ -1,5 +1,7 @@
 pub mod agent;
-pub mod client;
 pub mod cli;
-pub mod transport;
+pub mod client;
+pub mod event;
+pub mod examplemodulefile;
+pub mod manifest;
 pub mod module;
