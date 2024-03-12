@@ -44,15 +44,15 @@ fn run_module() -> Result<()> {
     let data = &args[1];
 
     // print a sample apply event to stdout
-    let apply_event = Event {
-        class: EventType::Apply(Manifest {
-            resources: vec![Box::new(File {
-                name: "test.txt".to_string(),
-                content: "Hello, World!".to_string(),
-            })],
-        }),
-    };
-    println!("{}", serde_json::to_string(&apply_event)?);
+    // let apply_event = Event {
+    //     class: EventType::Apply(Manifest {
+    //         resources: vec![Box::new(File {
+    //             // name: "test.txt".to_string(),
+    //             // content: "Hello, World!".to_string(),
+    //         })],
+    //     }),
+    // };
+    // println!("{}", serde_json::to_string(&apply_event)?);
 
     // data is a valid UTF-8 string
     // now we need to deserialize it
