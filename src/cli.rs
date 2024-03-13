@@ -19,8 +19,28 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Ship a manifest (client mode)
+    /// 
+    
     Ship {
         /// The manifest to ship
+        /// 
+        /// Caravel expects the following working directory structure.
+        /// 
+        /// .
+        /// 
+        /// ├── caravel_modules
+        /// 
+        /// │   ├── Module1.so
+        /// 
+        /// │   └── Module2.so
+        /// 
+        /// ├── lua_libs
+        /// 
+        /// │   ├── lualib1.lua
+        /// 
+        /// │   └── lualib2.lua
+        /// 
+        /// └── manifest_entrypoint.lua
         #[arg()]
         manifest: PathBuf,
 
