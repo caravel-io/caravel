@@ -19,8 +19,6 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Ship a manifest (client mode)
-    /// 
-    
     Ship {
         /// The manifest to ship
         /// 
