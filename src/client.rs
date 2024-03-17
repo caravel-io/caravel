@@ -1,14 +1,10 @@
-use crate::cli::Runnable;
-use std::path::PathBuf;
-use mlua::prelude::*;
-use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
-use std::fs;
-use serde::{
-    Serialize,
-    Deserialize,
-};
 use anyhow::Result;
+use mlua::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::ffi::{CStr, CString};
+use std::fs;
+use std::os::raw::c_char;
+use std::path::PathBuf;
 
 pub struct Client {
     pub manifest: PathBuf,
@@ -17,8 +13,8 @@ pub struct Client {
     pub inventory: Option<PathBuf>,
 }
 
-impl Runnable for Client {
-    fn run(&self) {
+impl Client {
+    pub async fn run(&self) -> Result<()> {
         println!("Running client!");
         println!("Manifest: {:?}", self.manifest);
         println!("Targets: {:?}", self.targets);
@@ -32,7 +28,7 @@ impl Runnable for Client {
         }
 
         let modules = gather_modules();
-    
+
         let lua_validate_namespace = Lua::new();
 
         // inject module resource validate functions at resource name
@@ -42,13 +38,16 @@ impl Runnable for Client {
 
         let manifest_entrypoint = fs::read_to_string(&self.manifest).unwrap();
 
-        let manifest_validate_chunk: LuaChunk = lua_validate_namespace.load(&manifest_entrypoint)
-        .set_name(self.manifest.to_str().unwrap());
+        let manifest_validate_chunk: LuaChunk = lua_validate_namespace
+            .load(&manifest_entrypoint)
+            .set_name(self.manifest.to_str().unwrap());
 
         // run the manifest, allowing lua and the module
         // to bubble up syntax errors
         match manifest_validate_chunk.exec() {
-            Ok(_) => {println!("=== validated ===")}
+            Ok(_) => {
+                println!("=== validated ===")
+            }
             Err(e) => {
                 print!("{}", e);
                 std::process::exit(1);
@@ -64,16 +63,20 @@ impl Runnable for Client {
 
         // run the manifest again, allowing lua and the module
         // to bubble up errors from the process
-        let manifest_apply_chunk: LuaChunk = lua_apply_namespace.load(&manifest_entrypoint)
-        .set_name(self.manifest.to_str().unwrap());
+        let manifest_apply_chunk: LuaChunk = lua_apply_namespace
+            .load(&manifest_entrypoint)
+            .set_name(self.manifest.to_str().unwrap());
 
         match manifest_apply_chunk.exec() {
-            Ok(_) => {println!("=== applied ===")}
+            Ok(_) => {
+                println!("=== applied ===")
+            }
             Err(e) => {
                 print!("{}", e);
                 std::process::exit(1);
             }
         }
+        Ok(())
     }
 }
 
@@ -90,20 +93,22 @@ struct CaravelModuleResponse {
 }
 
 /// Dynamically open library at path, find given function name, and pass input to it.
-/// 
+///
 /// The linked function expects to take a C string and return a C string.
 /// It's used to pass json serialized strings both ways.
-/// 
+///
 /// Input: JSON representation of the modules' resource.
-/// 
+///
 /// Output: JSON representation of CaravelModuleResponse.
 fn call_dynamic(lib_path: &str, func_name: &str, input: &str) -> Result<CaravelModuleResponse> {
     unsafe {
         let lib = libloading::Library::new(lib_path).unwrap();
-        let func: libloading::Symbol<unsafe extern fn(*const c_char) -> *mut c_char> = lib.get(func_name.as_bytes()).unwrap();
+        let func: libloading::Symbol<unsafe extern "C" fn(*const c_char) -> *mut c_char> =
+            lib.get(func_name.as_bytes()).unwrap();
         let response: *mut c_char = func(CString::new(input).unwrap().into_raw());
         let c_str = CStr::from_ptr(response);
-        let carevel_reponse: CaravelModuleResponse  = serde_json::from_str(c_str.to_str().unwrap()).unwrap();
+        let carevel_reponse: CaravelModuleResponse =
+            serde_json::from_str(c_str.to_str().unwrap()).unwrap();
         Ok(carevel_reponse)
     }
 }
@@ -116,12 +121,12 @@ struct ModuleInfo {
 }
 
 /// Enumerate ./caravel_modules for Caravel module binaries.
-/// 
+///
 /// Does no verification of local or remote platform/architechture support, yet.
-fn gather_modules() -> Vec<ModuleInfo>{
+fn gather_modules() -> Vec<ModuleInfo> {
     let mut module_paths: Vec<String> = Vec::new();
     if !std::path::Path::new("./caravel_modules").exists() {
-        return Vec::new()
+        return Vec::new();
     }
     match fs::read_dir("./caravel_modules") {
         Ok(entries) => {
@@ -142,17 +147,18 @@ fn gather_modules() -> Vec<ModuleInfo>{
         let module_parts: Vec<String> = module_path.split("/").map(|s| s.to_string()).collect();
         let module_name_part = module_parts.last().unwrap().to_string();
 
-        let module_name = module_name_part.split(".")
-        .map(|s| s.to_string()).collect::<Vec<String>>()
-        .first().unwrap().to_string();
+        let module_name = module_name_part
+            .split(".")
+            .map(|s| s.to_string())
+            .collect::<Vec<String>>()
+            .first()
+            .unwrap()
+            .to_string();
 
-
-        modules.push(
-            ModuleInfo {
-                name: module_name,
-                path: module_path,
-            }
-        )   
+        modules.push(ModuleInfo {
+            name: module_name,
+            path: module_path,
+        })
     }
     modules
 }
@@ -160,74 +166,68 @@ fn gather_modules() -> Vec<ModuleInfo>{
 /// Injects a function into the given Lua namespace
 /// at module.name. The injected function wraps
 /// the module.name+"Validate" function from the Caravel Module.
-/// 
+///
 /// The Lua function takes a single table representing the desired resource,
 /// which is serialize into JSON and passed to the wrapped function.
 /// The wrapped function will return a JSON serialized CaravelModuleResponse.
-/// 
+///
 /// If either side can't Serialize/Deserialize the provided JSON, it will bubble
 /// up a syntax error.
 fn inject_lua_validate_module(lua: &Lua, module: ModuleInfo) {
     let module_name = module.name.clone();
-    let inject_func = lua.create_function(
-        move |_, input: LuaTable| {
+    let inject_func = lua
+        .create_function(move |_, input: LuaTable| {
             match call_dynamic(
-                module.path.as_str(), 
-                {module.name.clone() + "Validate"}.as_str(),
+                module.path.as_str(),
+                { module.name.clone() + "Validate" }.as_str(),
                 serde_json::to_string(&input).unwrap().as_str(),
             ) {
-                Ok(response) => {
-                    match response.state {
-                        CaravelModuleResponseState::Success => {
-                            Ok(response.message)
-                        }
-                        CaravelModuleResponseState::Error => {
-                            Err(LuaError::SyntaxError{
-                                message: response.message,
-                                incomplete_input: false
-                            })
-                        }
-                    }
+                Ok(response) => match response.state {
+                    CaravelModuleResponseState::Success => Ok(response.message),
+                    CaravelModuleResponseState::Error => Err(LuaError::SyntaxError {
+                        message: response.message,
+                        incomplete_input: false,
+                    }),
                 },
-                Err(e) => Err(LuaError::RuntimeError(stringify!(e).into())),
+                Err(_) => Err(LuaError::RuntimeError(stringify!(e).into())),
             }
-        }
-    ).unwrap();
-    lua.globals().set(module_name.as_str(), inject_func).unwrap();
+        })
+        .unwrap();
+    lua.globals()
+        .set(module_name.as_str(), inject_func)
+        .unwrap();
 }
 
 /// Injects a function into the given Lua namespace
 /// at module.name. The injected function wraps
 /// the module.name+"Apply" function from the Caravel Module.
-/// 
+///
 /// The Lua function takes a single table representing the desired resource,
 /// which is serialize into JSON and passed to the wrapped function.
 /// The wrapped function will return a JSON serialized CaravelModuleResponse.
-/// 
+///
 /// If either side can't Serialize/Deserialize the provided JSON, it will bubble
 /// up a runtime error.
 fn inject_lua_apply_module(lua: &Lua, module: ModuleInfo) {
     let module_name = module.name.clone();
-    let inject_func = lua.create_function(
-        move |_, input: LuaTable| {
+    let inject_func = lua
+        .create_function(move |_, input: LuaTable| {
             match call_dynamic(
-                module.path.as_str(), 
-                {module.name.clone() + "Apply"}.as_str(),
+                module.path.as_str(),
+                { module.name.clone() + "Apply" }.as_str(),
                 serde_json::to_string(&input).unwrap().as_str(),
             ) {
-                Ok(response) => {
-                    match response.state {
-                        CaravelModuleResponseState::Success => {
-                            Ok(response.message)
-                        }
-                        CaravelModuleResponseState::Error => {
-                            Err(LuaError::RuntimeError(response.message))
-                        }
+                Ok(response) => match response.state {
+                    CaravelModuleResponseState::Success => Ok(response.message),
+                    CaravelModuleResponseState::Error => {
+                        Err(LuaError::RuntimeError(response.message))
                     }
                 },
-                Err(e) => Err(LuaError::RuntimeError(stringify!(e).into())),
+                Err(_) => Err(LuaError::RuntimeError(stringify!(e).into())),
             }
-        }
-    ).unwrap();
-    lua.globals().set(module_name.as_str(), inject_func).unwrap();
+        })
+        .unwrap();
+    lua.globals()
+        .set(module_name.as_str(), inject_func)
+        .unwrap();
 }

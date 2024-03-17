@@ -4,6 +4,6 @@ pub struct DevelopArgs {
     pub destination: PathBuf,
 }
 
-pub fn run(args: DevelopArgs) {
+pub async fn run(args: DevelopArgs) {
     println!("Developing!");
 }

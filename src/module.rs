@@ -1,13 +1,14 @@
-use crate::cli::Runnable;
+use anyhow::Result;
 use std::path::PathBuf;
 
 pub struct CreateModule {
     pub destination: PathBuf,
 }
 
-impl Runnable for CreateModule {
-    fn run(&self) {
+impl CreateModule {
+    pub async fn run(&self) -> Result<()> {
         println!("Creating new module at: {:?}", self.destination);
+        Ok(())
     }
 }
 
@@ -15,17 +16,15 @@ pub struct ValidateModule {
     pub path: PathBuf,
 }
 
-impl Runnable for ValidateModule {
-    fn run(&self) {
+impl ValidateModule {
+    pub async fn run(&self) -> Result<()> {
         println!("Validating module at: {:?}", self.path);
+        Ok(())
     }
 }
 
 // wip
 use crate::event::{Event, EventType, QueryType};
-use crate::examplemodulefile::File;
-use crate::manifest::Manifest;
-use anyhow::Result;
 use std::process::exit;
 
 #[allow(dead_code)]

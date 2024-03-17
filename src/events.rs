@@ -21,6 +21,8 @@ pub enum EventType {
 #[derive(Serialize, Deserialize)]
 pub struct Event {
     pub class: EventType,
+    pub id: String,
+    pub payload: Option<String>,
 }
 
 impl Event {
