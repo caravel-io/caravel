@@ -100,7 +100,7 @@ async fn main() {
         }
         .run()
         .await
-        .unwrap(),
+        .expect("Failed to run agent"),
 
         Commands::Module { action } => match action {
             ModuleAction::New { destination } => CreateModule {

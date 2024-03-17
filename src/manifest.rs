@@ -10,3 +10,10 @@ pub struct Manifest {
 pub trait Resource {
     fn apply(&self) -> Result<()>;
 }
+
+pub fn apply(manifest: Manifest) -> Result<()> {
+    for resource in manifest.resources {
+        resource.apply()?;
+    }
+    Ok(())
+}

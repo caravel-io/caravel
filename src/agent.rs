@@ -1,9 +1,12 @@
+use crate::events::{Event, EventType};
 use anyhow::{Context, Result};
 use rand::{self, thread_rng, Rng};
 use std::path::PathBuf;
 use tokio::time::{sleep, Duration};
 
-use axum::{routing::post, Router};
+use crate::manifest;
+use axum::http::StatusCode;
+use axum::{routing::post, Json, Router};
 use serde::Deserialize;
 
 pub struct Agent {
@@ -128,7 +131,7 @@ impl Agent {
 
         // Also start the pull mode if a manifest was given
         if let Some(_manifest) = &config.manifest {
-            tokio::spawn(pull(config.clone()));
+            tokio::spawn(pull_loop(config.clone()));
         }
 
         loop {}
@@ -143,38 +146,93 @@ async fn serve(config: AgentConfig) {
         config.listen_address.unwrap(),
         config.listen_port.unwrap()
     );
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let listener = match tokio::net::TcpListener::bind(&addr).await {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!("Failed to bind to {}: {}", addr, e);
+            std::process::exit(1);
+        }
+    };
+    match axum::serve(listener, app).await {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("Failed to start server: {}", e);
+            std::process::exit(1);
+        }
+    };
 }
 
-async fn pull(config: AgentConfig) {
+async fn pull_loop(config: AgentConfig) {
     loop {
-        println!("Pulling manifest: {:?}", config.manifest);
+        match pull(config.clone()) {
+            Ok(_) => {}
+            Err(e) => {
+                eprintln!("Failed to pull manifest: {}", e);
+            }
+        };
         let splayed_sleep = generate_duration(config.interval.unwrap(), config.splay.unwrap());
         sleep(splayed_sleep).await;
     }
 }
 
-async fn receive(Json(payload): Json<CreateUser>) -> &'static str {
-    // eventually, we want to validate the connection somehow
-    // patrick seems to know the dance
-    "Hello, World!"
+fn pull(config: AgentConfig) -> Result<()> {
+    println!("Pulling manifest: {:?}", config.manifest);
+    Ok(())
 }
 
-async fn create_user(
-    // this argument tells axum to parse the request body
-    // as JSON into a `CreateUser` type
-    Json(payload): Json<CreateUser>,
-) -> (StatusCode, Json<User>) {
-    // insert your application logic here
-    let user = User {
-        id: 1337,
-        username: payload.username,
+async fn receive(Json(event): Json<Event>) -> (StatusCode, Json<Event>) {
+    // eventually, we want to validate the connection somehow
+    // patrick seems to know the dance
+    if event.class != EventType::ApplyManifest {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(Event::new(
+                EventType::Error,
+                Some("Only Apply events are accepted".to_string()),
+            )),
+        );
+    }
+    if event.message.is_none() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(Event::new(
+                EventType::Error,
+                Some("Apply events must have a message".to_string()),
+            )),
+        );
+    }
+    let m = match serde_json::from_str(&event.message.unwrap()) {
+        Ok(m) => m,
+        Err(e) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(Event::new(
+                    EventType::Error,
+                    Some(format!("Failed to parse message: {}", e)),
+                )),
+            )
+        }
     };
-
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(user))
+    match manifest::apply(m) {
+        Ok(_) => {
+            return (
+                StatusCode::CREATED,
+                Json(Event::new(
+                    EventType::ApplySuccess,
+                    Some("Manifest applied successfully".to_string()),
+                )),
+            )
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(Event::new(
+                    EventType::ApplyFailure,
+                    Some(format!("Failed to apply manifest: {}", e)),
+                )),
+            )
+        }
+    }
 }
 
 fn generate_duration(interval: u64, splay: u64) -> Duration {

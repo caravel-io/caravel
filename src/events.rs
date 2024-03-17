@@ -1,31 +1,37 @@
-use crate::manifest::Manifest;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::io;
 use std::io::prelude::*;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub enum QueryType {
     Health,
     Features,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 pub enum EventType {
-    Query(QueryType),
-    Apply(Manifest),
-    Error(String),
-    Reply(String),
+    Query,
+    Error,
+    Reply,
+    ApplyManifest,
+    ApplySuccess,
+    ApplyFailure,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Event {
     pub class: EventType,
     pub id: String,
-    pub payload: Option<String>,
+    pub message: Option<String>,
 }
 
 impl Event {
+    pub fn new(class: EventType, message: Option<String>) -> Event {
+        let id = uuid::Uuid::new_v4().to_string();
+        Event { class, id, message }
+    }
+
     pub fn write_to_stdout(&self) -> Result<()> {
         let event_s = serde_json::to_string(&self)?;
         let _ = io::stdout().write(event_s.as_bytes());
