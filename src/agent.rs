@@ -1,3 +1,4 @@
+use crate::config::AgentConfig;
 use crate::events::{Event, EventType};
 use anyhow::{Context, Result};
 use rand::{self, thread_rng, Rng};
@@ -7,102 +8,9 @@ use tokio::time::{sleep, Duration};
 use crate::manifest;
 use axum::http::StatusCode;
 use axum::{routing::post, Json, Router};
-use serde::Deserialize;
 
 pub struct Agent {
     pub config: Option<PathBuf>,
-}
-
-/*
-Example toml config:
-
-listen_port = '8080'
-listen_address = '0.0.0.0'
-interval = '30'
-manifest = '/path/to/manifest.lua' # or 'https://url/to/manifest.lua'
-splay = '0'
-
-*/
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct AgentConfig {
-    // Listen mode
-    pub listen_port: Option<u64>,
-    pub listen_address: Option<String>,
-    pub disable_listen: Option<bool>,
-
-    // Pull mode
-    pub interval: Option<u64>,
-    pub splay: Option<u64>,
-    pub manifest: Option<String>,
-}
-
-impl AgentConfig {
-    // Default values should be set here
-    pub fn new() -> AgentConfig {
-        AgentConfig {
-            listen_port: Some(1336),
-            listen_address: Some("0.0.0.0".to_string()),
-            disable_listen: Some(false),
-
-            interval: Some(30),
-            splay: Some(0),
-            manifest: None,
-        }
-    }
-
-    // This function merges in a config that was brought in via TOML
-    pub fn merge_with(&mut self, other: &AgentConfig) {
-        if let Some(listen_port) = other.listen_port {
-            self.listen_port = Some(listen_port);
-        }
-        if let Some(listen_address) = &other.listen_address {
-            self.listen_address = Some(listen_address.clone());
-        }
-        if let Some(disable_listen) = &other.disable_listen {
-            self.disable_listen = Some(disable_listen.clone());
-        }
-
-        if let Some(interval) = other.interval {
-            self.interval = Some(interval);
-        }
-        if let Some(splay) = other.splay {
-            self.splay = Some(splay);
-        }
-        if let Some(manifest) = &other.manifest {
-            self.manifest = Some(manifest.clone());
-        }
-    }
-
-    // This one applies environment variables after all other configs
-    pub fn merge_environment(&mut self) {
-        if let Ok(port) = std::env::var("CARAVEL_AGENT_PORT") {
-            self.listen_port = Some(port.parse().unwrap());
-        }
-        if let Ok(address) = std::env::var("CARAVEL_AGENT_ADDRESS") {
-            self.listen_address = Some(address);
-        }
-        if let Ok(dl) = std::env::var("CARAVEL_AGENT_DISABLE_LISTEN") {
-            let valids = vec!["true", "false", "1", "0"];
-            if valids.contains(&dl.as_str()) {
-                if dl == "true" || dl == "1" {
-                    self.disable_listen = Some(true);
-                } else {
-                    self.disable_listen = Some(false);
-                }
-            }
-        }
-
-        if let Ok(interval) = std::env::var("CARAVEL_AGENT_INTERVAL") {
-            self.interval = Some(interval.parse().unwrap());
-        }
-        if let Ok(splay) = std::env::var("CARAVEL_AGENT_SPLAY") {
-            self.splay = Some(splay.parse().unwrap());
-        }
-        if let Ok(manifest) = std::env::var("CARAVEL_AGENT_MANIFEST") {
-            self.manifest = Some(manifest);
-        }
-    }
 }
 
 impl Agent {
@@ -235,12 +143,31 @@ async fn receive(Json(event): Json<Event>) -> (StatusCode, Json<Event>) {
     }
 }
 
+/// Generate a random duration based on the interval and splay
+/// The duration will be between interval - splay and interval + splay
+/// If the interval is 0, it will default to 60 seconds
 fn generate_duration(interval: u64, splay: u64) -> Duration {
-    let random_splay = thread_rng().gen_range(0 - splay..=splay);
-    let random_duration = Duration::from_secs(interval * 60 + random_splay);
+    let random_splay: i64 = thread_rng().gen_range(0 - splay as i64..=splay as i64);
+    let interval_seconds = (interval * 60) as i64;
+    let duration = Duration::from_secs((interval_seconds + random_splay) as u64);
     // just in case they set some wonky values for interval and splay
-    if random_duration.as_secs() <= 0 {
+    if duration.as_secs() <= 0 {
         return Duration::from_secs(60);
     }
-    random_duration
+    duration
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_duration() {
+        let interval = 30; // 30 minutes
+        let splay = 10; // 10 seconds
+                        // it should be between 29:50 and 30:10 or 1790 and 1810 seconds
+        let d = generate_duration(interval, splay);
+        println!("Duration: {:?}", d);
+        assert!(d.as_secs() >= 1790 && d.as_secs() <= 1810);
+    }
 }
