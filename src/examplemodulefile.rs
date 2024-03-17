@@ -83,6 +83,7 @@ impl File {
 
 #[typetag::serde]
 impl Resource for File {
+    /// Apply the resource to the system.
     fn apply(&self) -> Result<()> {
         println!("pretending to create file: {:?}", self.path);
         Ok(())
