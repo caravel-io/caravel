@@ -96,7 +96,7 @@ async fn main() {
         .unwrap(),
 
         Commands::Agent { config } => Agent {
-            config: config.clone(),
+            config_path: config.clone(),
         }
         .run()
         .await

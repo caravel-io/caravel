@@ -10,7 +10,7 @@ use axum::http::StatusCode;
 use axum::{routing::post, Json, Router};
 
 pub struct Agent {
-    pub config: Option<PathBuf>,
+    pub config_path: Option<PathBuf>,
 }
 
 impl Agent {
@@ -21,7 +21,7 @@ impl Agent {
         let mut config = AgentConfig::new();
 
         // Merge config file if it was provided
-        if let Some(c) = &self.config {
+        if let Some(c) = &self.config_path {
             let config_str = std::fs::read_to_string(c).context("Failed to read config file")?;
             let provided_config: AgentConfig = toml::from_str(&config_str)?;
             config.merge_with(&provided_config);
