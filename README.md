@@ -6,6 +6,7 @@ Next-gen configuration management using Rust and Lua
 
 > [!WARNING]  
 > 🚧 Caravel is under active development, and is in no way, shape, or form ready for use. 🚧
+>
 > 🚧 Please enjoy our empty promises in the Motivation section below! 🚧
 
 ## Motivation
