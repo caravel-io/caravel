@@ -28,4 +28,93 @@ and Rust as the engine allows the best of both worlds!
 
 Caravel is and will always be open-source and free.
 
+The name is based on a type of ship:
+
+> The caravel is a small maneuverable sailing ship that was known for its agility and speed.
+
+## Usage
+
+TBD
+
+## Writing a Manifest
+
+Caravel applies resources based on a manifest that you write in Lua. 
+
+A very simple "package-file-service" manifest might look like:
+
+```lua
+caravel.core.package({
+    name = "nginx",
+    state = "present",
+})
+
+caravel.core.file({
+    src = "nginx.conf", -- stored with the manifest
+    dest = "/etc/nginx/nginx.conf",
+    mode = "0644"
+})
+
+caravel.core.service({
+    name = "nginx",
+    state = "running",
+})
+```
+
+Now we can spice it up by having the service restart if the file changes:
+
+```lua
+caravel.core.package({
+    name = "nginx",
+    state = "present",
+})
+
+local nginx_conf = caravel.core.file({
+    src = "nginx.conf", -- stored with the manifest
+    dest = "/etc/nginx/nginx.conf",
+    mode = "0644"
+})
+
+caravel.core.service({
+    name = "nginx",
+    state = "running",
+    subscribe = { nginx_conf },
+})
+```
+
+What if we need a custom restart handler?
+
+```lua
+caravel.core.package({
+    name = "nginx",
+    state = "present",
+})
+
+local nginx_conf = caravel.core.file({
+    src = "nginx.conf", -- stored with the manifest
+    dest = "/etc/nginx/nginx.conf",
+    mode = "0644"
+})
+
+local custom_nginx_restarter = function()
+    local check_conf = caravel.core.shell({
+        cmd = "/usr/local/bin/check_nginx_conf.sh"
+    })
+    if check_conf.success then
+        caravel.core.service({
+            name = "nginx",
+            state = "restarted",
+        })
+    end
+end
+
+caravel.core.service({
+    name = "nginx",
+    state = "running",
+    subscribe = { 
+        { nginx_conf, handler = custom_nginx_restarter }, 
+    },
+})
+```
+
+
 <sup><sub><a href="https://www.vecteezy.com/free-vector/caravel">Caravel Vectors by Vecteezy</a></sub></sup>
