@@ -27,6 +27,22 @@ impl Client {
             std::process::exit(1);
         }
 
+        if self.targets.is_none() && self.groups.is_none() {
+            eprintln!("You must provide either targets or groups!");
+            std::process::exit(1);
+        }
+
+        if let Some(targets) = &self.targets {
+            for target in targets {
+                let client = reqwest::Client::new();
+                let res = client
+                    .post(format!("{}:1336", target))
+                    .body(Json(self.manifest))
+                    .send()
+                    .await?;
+            }
+        }
+
         let modules = gather_modules();
 
         let lua_validate_namespace = Lua::new();
