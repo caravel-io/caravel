@@ -9,7 +9,7 @@ pub enum QueryType {
     Features,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub enum EventType {
     Query,
     Error,
@@ -19,7 +19,7 @@ pub enum EventType {
     ApplyFailure,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Event {
     pub class: EventType,
     pub id: String,

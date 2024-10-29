@@ -1,5 +1,6 @@
 use crate::config::AgentConfig;
 use crate::events::{Event, EventType};
+use crate::manifest::Manifest;
 use anyhow::{Context, Result};
 use rand::{self, thread_rng, Rng};
 use std::path::PathBuf;
@@ -96,7 +97,7 @@ async fn receive(Json(event): Json<Event>) -> (StatusCode, Json<Event>) {
             StatusCode::BAD_REQUEST,
             Json(Event::new(
                 EventType::Error,
-                Some("Only Apply events are accepted".to_string()),
+                Some("Only ApplyManifest events are accepted".to_string()),
             )),
         );
     }
@@ -105,11 +106,11 @@ async fn receive(Json(event): Json<Event>) -> (StatusCode, Json<Event>) {
             StatusCode::BAD_REQUEST,
             Json(Event::new(
                 EventType::Error,
-                Some("Apply events must have a message".to_string()),
+                Some("ApplyManifest events must have a message".to_string()),
             )),
         );
     }
-    let m = match serde_json::from_str(&event.message.unwrap()) {
+    let m: Manifest = match serde_json::from_str(&event.message.unwrap()) {
         Ok(m) => m,
         Err(e) => {
             return (
