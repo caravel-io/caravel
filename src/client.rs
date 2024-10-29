@@ -32,16 +32,16 @@ impl Client {
             std::process::exit(1);
         }
 
-        if let Some(targets) = &self.targets {
-            for target in targets {
-                let client = reqwest::Client::new();
-                let res = client
-                    .post(format!("{}:1336", target))
-                    .body(Json(self.manifest))
-                    .send()
-                    .await?;
-            }
-        }
+        // if let Some(targets) = &self.targets {
+        //     for target in targets {
+        //         let client = reqwest::Client::new();
+        //         let res = client
+        //             .post(format!("{}:1336", target))
+        //             .body(Json(self.manifest))
+        //             .send()
+        //             .await?;
+        //     }
+        // }
 
         let modules = gather_modules();
 

@@ -11,7 +11,7 @@ pub trait Resource {
     fn apply(&self) -> Result<()>;
 }
 
-pub fn apply(manifest: String) -> Result<()> {
+pub fn apply(manifest: Manifest) -> Result<()> {
     for resource in manifest.resources {
         resource.apply()?;
     }
