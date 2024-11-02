@@ -1,11 +1,9 @@
 [package]
-name = "caravel"
+name = "caravel_core"
 version = "0.1.0"
 edition = "2021"
-description = "Next-gen configuration management using Rust and Lua"
+description = "Core libs for Caravel"
 repository = "https://github.com/caravel-io/caravel"
-readme = "README.md"
-license-file = "LICENSE"
 keywords = ["configuration", "management", "lua", "rust"]
 categories = ["command-line-utilities"]
 
@@ -25,5 +23,3 @@ toml = "0.8.11"
 tracing = "0.1.40"
 typetag = "0.2.16"
 uuid = { version = "1.7.0", features = ["v4"] }
-
-caravel_core = { path = "caravel_core" }
