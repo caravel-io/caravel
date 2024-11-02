@@ -15,7 +15,7 @@ pub struct Agent {
 }
 
 impl Agent {
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         // First check if config was provided
         // If it was, merge it with the default options
 
