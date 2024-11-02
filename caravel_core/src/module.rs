@@ -1,4 +1,3 @@
-use anyhow::Result;
 use std::path::PathBuf;
 
 pub struct CreateModule {
@@ -6,7 +5,7 @@ pub struct CreateModule {
 }
 
 impl CreateModule {
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Creating new module at: {:?}", self.destination);
         Ok(())
     }
@@ -17,7 +16,7 @@ pub struct ValidateModule {
 }
 
 impl ValidateModule {
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Validating module at: {:?}", self.path);
         Ok(())
     }

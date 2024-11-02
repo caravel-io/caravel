@@ -76,7 +76,7 @@ enum ModuleAction {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
 
     match &args.command {
@@ -85,33 +85,35 @@ async fn main() {
             targets,
             groups,
             inventory,
-        } => Client {
-            manifest: manifest.clone(),
-            targets: targets.clone(),
-            groups: groups.clone(),
-            inventory: inventory.clone(),
-        }
-        .run()
-        .await
-        .unwrap(),
-
-        Commands::Agent { config } => Agent {
-            config_path: config.clone(),
-        }
-        .run()
-        .await
-        .expect("Failed to run agent"),
-
-        Commands::Module { action } => match action {
-            ModuleAction::New { destination } => CreateModule {
-                destination: destination.clone(),
+        } => {
+            Client {
+                manifest: manifest.clone(),
+                targets: targets.clone(),
+                groups: groups.clone(),
+                inventory: inventory.clone(),
             }
             .run()
-            .await
-            .unwrap(),
-            ModuleAction::Validate { path } => {
-                ValidateModule { path: path.clone() }.run().await.unwrap()
+            .await?
+        }
+
+        Commands::Agent { config } => {
+            Agent {
+                config_path: config.clone(),
             }
+            .run()
+            .await?
+        }
+        Commands::Module { action } => match action {
+            ModuleAction::New { destination } => {
+                CreateModule {
+                    destination: destination.clone(),
+                }
+                .run()
+                .await?
+            }
+            ModuleAction::Validate { path } => ValidateModule { path: path.clone() }.run().await?,
         },
     }
+
+    Ok(())
 }

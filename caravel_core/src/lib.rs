@@ -1,6 +1,6 @@
 pub mod agent;
-pub mod config;
 pub mod client;
+pub mod config;
 pub mod errors;
 pub mod events;
 pub mod examplemodulefile;

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use crate::errors::ClientError;
 use mlua::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ffi::{CStr, CString};
@@ -14,7 +14,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Running client!");
         println!("Manifest: {:?}", self.manifest);
         println!("Targets: {:?}", self.targets);
@@ -23,13 +23,11 @@ impl Client {
         println!("\n\n");
 
         if !&self.manifest.exists() {
-            eprintln!("Provided manifest doesn't exist!");
-            std::process::exit(1);
+            return Err(ClientError::ManifestNotFound(self.manifest.display().to_string()).into());
         }
 
         if self.targets.is_none() && self.groups.is_none() {
-            eprintln!("You must provide either targets or groups!");
-            std::process::exit(1);
+            return Err(ClientError::TargetsOrGroupsRequired.into());
         }
 
         // if let Some(targets) = &self.targets {
@@ -118,7 +116,11 @@ pub struct CaravelModuleResponse {
 /// Input: JSON representation of the modules' resource.
 ///
 /// Output: JSON representation of CaravelModuleResponse.
-fn call_dynamic(lib_path: &str, func_name: &str, input: &str) -> Result<CaravelModuleResponse> {
+fn call_dynamic(
+    lib_path: &str,
+    func_name: &str,
+    input: &str,
+) -> Result<CaravelModuleResponse, ClientError> {
     unsafe {
         let lib = libloading::Library::new(lib_path).unwrap();
         let func: libloading::Symbol<unsafe extern "C" fn(*const c_char) -> *mut c_char> =
