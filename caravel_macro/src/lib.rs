@@ -31,7 +31,7 @@ pub fn caravel_resource(_: TokenStream, input: TokenStream) -> TokenStream {
     use caravel_core::client::{CaravelModuleResponse, CaravelModuleResponseState};
 
     impl #resource_ident {
-      fn from_json_string(in_str: &str) -> Result<#resource_ident> {
+      fn from_json_string(in_str: &str) -> Result<#resource_ident, Box<dyn std::error::Error>> {
         let resource: #resource_ident = serde_json::from_str(in_str)?;
         Ok(resource)
       }
