@@ -27,3 +27,4 @@ typetag = "0.2.16"
 uuid = { version = "1.7.0", features = ["v4"] }
 
 caravel_core = { path = "caravel_core" }
+caravel_macro = { path = "caravel_macro" }

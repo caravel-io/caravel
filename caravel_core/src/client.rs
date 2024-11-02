@@ -97,15 +97,17 @@ impl Client {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-enum CaravelModuleResponseState {
+pub enum CaravelModuleResponseState {
     Success,
     Error,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct CaravelModuleResponse {
-    state: CaravelModuleResponseState,
-    message: String,
+pub struct CaravelModuleResponse {
+    pub state: CaravelModuleResponseState,
+    pub message: String,
+    pub raw_module: String,
+    pub module: Option<serde_json::Value>,
 }
 
 /// Dynamically open library at path, find given function name, and pass input to it.
@@ -192,14 +194,17 @@ fn gather_modules() -> Vec<ModuleInfo> {
 fn inject_lua_validate_module(lua: &Lua, module: ModuleInfo) {
     let module_name = module.name.clone();
     let inject_func = lua
-        .create_function(move |_, input: LuaTable| {
+        .create_function(move |lua, input: LuaTable| {
             match call_dynamic(
                 module.path.as_str(),
                 { module.name.clone() + "Validate" }.as_str(),
                 serde_json::to_string(&input).unwrap().as_str(),
             ) {
-                Ok(response) => match response.state {
-                    CaravelModuleResponseState::Success => Ok(response.message),
+                Ok(mut response) => match response.state {
+                    CaravelModuleResponseState::Success => {
+                        response.module = Some(serde_json::from_str(&response.raw_module).unwrap());
+                        Ok(lua.to_value(&response))
+                    }
                     CaravelModuleResponseState::Error => Err(LuaError::SyntaxError {
                         message: response.message,
                         incomplete_input: false,
@@ -227,14 +232,17 @@ fn inject_lua_validate_module(lua: &Lua, module: ModuleInfo) {
 fn inject_lua_apply_module(lua: &Lua, module: ModuleInfo) {
     let module_name = module.name.clone();
     let inject_func = lua
-        .create_function(move |_, input: LuaTable| {
+        .create_function(move |lua, input: LuaTable| {
             match call_dynamic(
                 module.path.as_str(),
                 { module.name.clone() + "Apply" }.as_str(),
                 serde_json::to_string(&input).unwrap().as_str(),
             ) {
-                Ok(response) => match response.state {
-                    CaravelModuleResponseState::Success => Ok(response.message),
+                Ok(mut response) => match response.state {
+                    CaravelModuleResponseState::Success => {
+                        response.module = Some(serde_json::from_str(&response.raw_module).unwrap());
+                        Ok(lua.to_value(&response))
+                    }
                     CaravelModuleResponseState::Error => {
                         Err(LuaError::RuntimeError(response.message))
                     }
