@@ -1,6 +1,6 @@
-use caravel_core::agent::Agent;
 use caravel_core::client::Client;
 use caravel_core::module::{CreateModule, ValidateModule};
+use caravel_core::agent::Agent;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
