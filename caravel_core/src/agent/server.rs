@@ -65,7 +65,9 @@ impl Agent {
 // 8. Agent receives ApplyManifestEvent and applies the manifest
 
 async fn serve(config: AgentConfig) {
-    let app = Router::new().route("/", post(handler).route("/upload", post(upload::handler)));
+    let app = Router::new()
+        .route("/", post(handler))
+        .route("/upload", post(upload::handler));
 
     let addr = format!(
         "{}:{}",

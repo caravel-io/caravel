@@ -3,9 +3,10 @@ use axum::{
     body::Bytes,
     extract::{FromRequest, Multipart, Request},
     http::{header::CONTENT_TYPE, StatusCode},
+    Json,
 };
 
-use super::events::{Event,EventType};
+use super::events::{Event, EventType};
 
 struct Manifest(Bytes);
 
@@ -46,5 +47,5 @@ where
 
 pub async fn handler() -> (StatusCode, Json<Event>) {
     let resp = Event::new(EventType::Assembled).message("received dependencies".to_lowercase());
-    return resp;
+    return (StatusCode::ACCEPTED, Json(resp));
 }
