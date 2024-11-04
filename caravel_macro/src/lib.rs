@@ -3,7 +3,7 @@ use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::parse_macro_input;
-use syn::ItemStruct;
+use syn::{Data, DataStruct, DeriveInput, Fields, ItemStruct, Type};
 
 /// Bring Struct.validate and Struct.apply to top level scope
 /// as C ABI compatible functions.
@@ -12,7 +12,9 @@ use syn::ItemStruct;
 /// wrapping them in Serialization/Deserialization
 #[proc_macro_attribute]
 pub fn caravel_resource(_: TokenStream, input: TokenStream) -> TokenStream {
+    let input_copy = input.clone();
     let item = parse_macro_input!(input as ItemStruct);
+    let input = parse_macro_input!(input_copy as DeriveInput);
 
     let resource_ident = item.ident.clone();
 
@@ -21,6 +23,23 @@ pub fn caravel_resource(_: TokenStream, input: TokenStream) -> TokenStream {
 
     let validate_ident = item.ident.to_string() + "Validate";
     let validate_shim_ident = Ident::new(validate_ident.as_str(), Span::call_site());
+
+    let dump_lua_ident = item.ident.to_string() + "DumpLua";
+    let dump_lua_shim_ident = Ident::new(dump_lua_ident.as_str(), Span::call_site());
+
+    let fields = match &input.data {
+        Data::Struct(DataStruct {
+            fields: Fields::Named(fields),
+            ..
+        }) => &fields.named,
+        _ => panic!("expected a struct with named fields"),
+    };
+
+    let field_name = fields.iter().map(|field| &field.ident);
+    let field_type = fields.iter().map(|field| &field.ty);
+
+    // let field_string = "---@field";
+    // let endline = "\n";
 
     quote! {
     #item
@@ -115,5 +134,55 @@ pub fn caravel_resource(_: TokenStream, input: TokenStream) -> TokenStream {
           }
         }
     }
+
+    #[no_mangle]
+    pub extern "C" fn #dump_lua_shim_ident() -> *const c_char {
+        // concat!(
+        // #(
+        //     stringify!("---@field" #field_name #field_type),
+        // )*
+        // )
+      CString::new(
+          concat!(
+              "---@class ",
+              stringify!(#resource_ident),
+              "\n",
+          #(
+              "---@field ",
+              stringify!(#field_name #field_type),
+              "\n",
+          )*
+            "\n",
+            "---@alias ModuleResponse {module: ",
+            stringify!(#resource_ident),
+            "}\n\n",
+            "---@return ModuleResponse\n",
+            "function ",
+            stringify!(#resource_ident),
+            "(params)\n",
+            "end\n",
+          )
+          // r#"
+
+          // ---@class #resource_ident
+          // #(
+          // ---@field #field_name #field_type
+          // )*
+
+          // ---@alias ModuleResponse {module: #resource_ident}
+
+
+          // ---@param params #resource_ident
+          // ---@return ModuleResponse
+          // function #resource_ident(params)
+          // end
+
+          // "#
+      ).unwrap().into_raw()
+    }
   }.into()
 }
+
+// fn resolve_type(ty: Type) -> String {
+//     match ty {}
+// }

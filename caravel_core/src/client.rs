@@ -47,7 +47,8 @@ impl Client {
 
         // inject module resource validate functions at resource name
         for module in &modules {
-            inject_lua_validate_module(&lua_validate_namespace, module.clone())
+            print_lua_doc(&lua_validate_namespace, module.clone());
+            inject_lua_validate_module(&lua_validate_namespace, module.clone());
         }
 
         let manifest_entrypoint = fs::read_to_string(&self.manifest).unwrap();
@@ -119,16 +120,41 @@ pub struct CaravelModuleResponse {
 fn call_dynamic(
     lib_path: &str,
     func_name: &str,
-    input: &str,
+    input: Option<&str>,
 ) -> Result<CaravelModuleResponse, ClientError> {
     unsafe {
         let lib = libloading::Library::new(lib_path).unwrap();
-        let func: libloading::Symbol<unsafe extern "C" fn(*const c_char) -> *mut c_char> =
-            lib.get(func_name.as_bytes()).unwrap();
-        let response: *mut c_char = func(CString::new(input).unwrap().into_raw());
+
+        let response: *mut c_char;
+        match input {
+            Some(input_str) => {
+                let func: libloading::Symbol<unsafe extern "C" fn(*const c_char) -> *mut c_char> =
+                    lib.get(func_name.as_bytes()).unwrap();
+                response = func(CString::new(input_str).unwrap().into_raw());
+            }
+            None => {
+                let func: libloading::Symbol<unsafe extern "C" fn() -> *mut c_char> =
+                    lib.get(func_name.as_bytes()).unwrap();
+                response = func();
+            }
+        }
+        // func(CString::new(input).unwrap().into_raw());
         let c_str = CStr::from_ptr(response);
         let carevel_reponse: CaravelModuleResponse =
             serde_json::from_str(c_str.to_str().unwrap()).unwrap();
+        Ok(carevel_reponse)
+    }
+}
+
+fn call_dynamic_string_return(lib_path: &str, func_name: &str) -> Result<String, ClientError> {
+    unsafe {
+        let lib = libloading::Library::new(lib_path).unwrap();
+
+        let func: libloading::Symbol<unsafe extern "C" fn() -> *mut c_char> =
+            lib.get(func_name.as_bytes()).unwrap();
+        let response: *mut c_char = func();
+        let c_str = CStr::from_ptr(response);
+        let carevel_reponse = c_str.to_str().unwrap().to_string();
         Ok(carevel_reponse)
     }
 }
@@ -154,7 +180,9 @@ fn gather_modules() -> Vec<ModuleInfo> {
                 match entry {
                     Ok(entry) => {
                         let mod_path = entry.path().to_str().unwrap().to_owned();
-                        module_paths.push(mod_path);
+                        if mod_path.ends_with(".dylib") {
+                            module_paths.push(mod_path);
+                        }
                     }
                     Err(e) => eprintln!("Error: {}", e),
                 }
@@ -183,6 +211,16 @@ fn gather_modules() -> Vec<ModuleInfo> {
     modules
 }
 
+fn print_lua_doc(_: &Lua, module: ModuleInfo) {
+    match call_dynamic_string_return(
+        module.path.as_str(),
+        { module.name.clone() + "DumpLua" }.as_str(),
+    ) {
+        Ok(res_string) => println!("{}", res_string),
+        Err(_) => {}
+    }
+}
+
 /// Injects a function into the given Lua namespace
 /// at module.name. The injected function wraps
 /// the module.name+"Validate" function from the Caravel Module.
@@ -200,7 +238,7 @@ fn inject_lua_validate_module(lua: &Lua, module: ModuleInfo) {
             match call_dynamic(
                 module.path.as_str(),
                 { module.name.clone() + "Validate" }.as_str(),
-                serde_json::to_string(&input).unwrap().as_str(),
+                Some(serde_json::to_string(&input).unwrap().as_str()),
             ) {
                 Ok(mut response) => match response.state {
                     CaravelModuleResponseState::Success => {
@@ -238,7 +276,7 @@ fn inject_lua_apply_module(lua: &Lua, module: ModuleInfo) {
             match call_dynamic(
                 module.path.as_str(),
                 { module.name.clone() + "Apply" }.as_str(),
-                serde_json::to_string(&input).unwrap().as_str(),
+                Some(serde_json::to_string(&input).unwrap().as_str()),
             ) {
                 Ok(mut response) => match response.state {
                     CaravelModuleResponseState::Success => {
