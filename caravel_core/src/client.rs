@@ -43,31 +43,31 @@ impl Client {
 
         let modules = gather_modules();
 
-        let lua_validate_namespace = Lua::new();
+        // let lua_validate_namespace = Lua::new();
 
         // inject module resource validate functions at resource name
-        for module in &modules {
-            print_lua_doc(&lua_validate_namespace, module.clone());
-            inject_lua_validate_module(&lua_validate_namespace, module.clone());
-        }
+        // for module in &modules {
+        //     print_lua_doc(&lua_validate_namespace, module.clone());
+        //     inject_lua_validate_module(&lua_validate_namespace, module.clone());
+        // }
 
         let manifest_entrypoint = fs::read_to_string(&self.manifest).unwrap();
 
-        let manifest_validate_chunk: LuaChunk = lua_validate_namespace
-            .load(&manifest_entrypoint)
-            .set_name(self.manifest.to_str().unwrap());
+        // let manifest_validate_chunk: LuaChunk = lua_validate_namespace
+        //     .load(&manifest_entrypoint)
+        //     .set_name(self.manifest.to_str().unwrap());
 
         // run the manifest, allowing lua and the module
         // to bubble up syntax errors
-        match manifest_validate_chunk.exec() {
-            Ok(_) => {
-                println!("=== validated ===")
-            }
-            Err(e) => {
-                print!("{}", e);
-                std::process::exit(1);
-            }
-        }
+        // match manifest_validate_chunk.exec() {
+        //     Ok(_) => {
+        //         println!("=== validated ===")
+        //     }
+        //     Err(e) => {
+        //         print!("{}", e);
+        //         std::process::exit(1);
+        //     }
+        // }
 
         let lua_apply_namespace = Lua::new();
 

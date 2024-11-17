@@ -21,9 +21,6 @@ pub fn caravel_resource(_: TokenStream, input: TokenStream) -> TokenStream {
     let apply_ident = item.ident.to_string() + "Apply";
     let apply_shim_ident = Ident::new(apply_ident.as_str(), Span::call_site());
 
-    let validate_ident = item.ident.to_string() + "Validate";
-    let validate_shim_ident = Ident::new(validate_ident.as_str(), Span::call_site());
-
     let dump_lua_ident = item.ident.to_string() + "DumpLua";
     let dump_lua_shim_ident = Ident::new(dump_lua_ident.as_str(), Span::call_site());
 
@@ -53,45 +50,6 @@ pub fn caravel_resource(_: TokenStream, input: TokenStream) -> TokenStream {
       fn from_json_string(in_str: &str) -> Result<#resource_ident, Box<dyn std::error::Error>> {
         let resource: #resource_ident = serde_json::from_str(in_str)?;
         Ok(resource)
-      }
-    }
-
-    #[no_mangle]
-    pub extern "C" fn #validate_shim_ident(input: *const c_char) -> *const c_char {
-      let c_str = unsafe { CStr::from_ptr(input) };
-      let new_str = c_str.to_str().unwrap();
-      match #resource_ident::from_json_string(new_str) {
-        Ok(mut resource) => {
-          match resource.validate() {
-            Ok(_) => {
-              let response = CaravelModuleResponse {
-                  state: CaravelModuleResponseState::Success,
-                message: "Success".into(),
-                raw_module: serde_json::to_string(&resource).unwrap(),
-                module: None,
-              };
-              CString::new(serde_json::to_string(&response).unwrap().as_str()).unwrap().into_raw()
-            },
-            Err(e)=> {
-              let response = CaravelModuleResponse {
-                  state: CaravelModuleResponseState::Error,
-                message: e.to_string(),
-                raw_module: "".into(),
-                module: None,
-              };
-              CString::new(serde_json::to_string(&response).unwrap().as_str()).unwrap().into_raw()
-            }
-          }
-        },
-        Err(e) => {
-          let response = CaravelModuleResponse {
-              state: CaravelModuleResponseState::Error,
-            message: e.to_string(),
-            raw_module: "".into(),
-            module: None,
-          };
-          CString::new(serde_json::to_string(&response).unwrap().as_str()).unwrap().into_raw()
-        }
       }
     }
 
