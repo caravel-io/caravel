@@ -78,12 +78,25 @@ pub enum CaravelModuleResponseState {
     Error,
 }
 
+impl LuaUserData for CaravelModuleResponseState {}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CaravelModuleResponse {
     pub state: CaravelModuleResponseState,
     pub message: String,
     pub raw_module: String,
     pub module: Option<serde_json::Value>,
+}
+
+impl LuaUserData for CaravelModuleResponse {
+    fn add_fields<F: LuaUserDataFields<Self>>(fields: &mut F) {
+        fields.add_field_method_get("test", |_, mut this| {
+            println!("Hello from rust");
+            let mut list: Vec<String> = Vec::new();
+            list.push("HELLO".into());
+            Ok(list)
+        });
+    }
 }
 
 /// Dynamically open library at path, find given function name, and pass input to it.
@@ -230,7 +243,10 @@ fn inject_lua_apply_module(lua: &Lua, module: ModuleInfo) {
                 Ok(mut response) => match response.state {
                     CaravelModuleResponseState::Success => {
                         response.module = Some(serde_json::from_str(&response.raw_module).unwrap());
-                        Ok(lua.to_value(&response))
+                        // let lua_result = lua.to_value(&response).unwrap();
+                        // let lua_userdata = lua_result.as_userdata().un;
+                        // lua_userdata.
+                        Ok(response)
                     }
                     CaravelModuleResponseState::Error => {
                         Err(LuaError::RuntimeError(response.message))

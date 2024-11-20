@@ -144,3 +144,7 @@ pub fn caravel_resource(_: TokenStream, input: TokenStream) -> TokenStream {
 // fn resolve_type(ty: Type) -> String {
 //     match ty {}
 // }
+#[proc_macro_attribute]
+pub fn caravel_exports(_: TokenStream, input: TokenStream) -> TokenStream {
+    return input;
+}
